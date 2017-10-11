@@ -7,6 +7,10 @@
 
 using namespace std;
 
+enum Type {
+	TYPE_INT,
+	TYPE_CMPLX
+};
 enum Token {
 	T_EOF,			// Конец текстового потока
 	T_ILLEGAL,		// Признак недопустимого символа

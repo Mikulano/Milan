@@ -103,7 +103,7 @@ void Parser::statement()
 	}
 }
 
-void Parser::expression()
+Type Parser::expression()
 {
 
 	 /*
@@ -126,9 +126,10 @@ void Parser::expression()
 			codegen_->emit(SUB);
 		}
 	}
+	return TYPE_INT;
 }
 
-void Parser::term()
+Type Parser::term()
 {
 	 /*  
 		 Терм описывается следующими правилами: <expression> -> <factor> | <factor> + <factor> | <factor> - <factor>
@@ -136,11 +137,11 @@ void Parser::term()
 		 удаляем его из потока и разбираем очередное слагаемое (вычитаемое). Повторяем проверку и разбор очередного 
 		 множителя, пока не встретим за ним символ, отличный от '*' и '/' 
 	*/
-	factor();
+	Type type_term = factor();
 	while(see(T_MULOP)) {
 		Arithmetic op = scanner_->getArithmeticValue();
 		next();
-		factor();
+		factor();	//!!!!!!
 
 		if(op == A_MULTIPLY) {
 			codegen_->emit(MULT);
@@ -149,10 +150,12 @@ void Parser::term()
 			codegen_->emit(DIV);
 		}
 	}
+	return type_term;
 }
 
-void Parser::factor()
+Type Parser::factor()
 {
+	Type type_factor = TYPE_INT;
 	/*
 		Множитель описывается следующими правилами:
 		<factor> -> number | identifier | -<factor> | (<expression>) | READ
@@ -163,20 +166,24 @@ void Parser::factor()
 		codegen_->emit(PUSH, value);
 		//Если встретили число, то преобразуем его в целое и записываем на вершину стека
 	}
+	else if (see(T_COMPLEX)) {
+		type_factor = TYPE_CMPLX;
+	}
 	else if(see(T_IDENTIFIER)) {
 		int varAddress = findOrAddVariable(scanner_->getStringValue());
 		next();
 		codegen_->emit(LOAD, varAddress);
+		return TYPE_INT; // !!!!!
 		//Если встретили переменную, то выгружаем значение, лежащее по ее адресу, на вершину стека 
 	}
 	else if(see(T_ADDOP) && scanner_->getArithmeticValue() == A_MINUS) {
 		next();
-		factor();
+		type_factor = factor();
 		codegen_->emit(INVERT);
 		//Если встретили знак "-", и за ним <factor> то инвертируем значение, лежащее на вершине стека
 	}
 	else if(match(T_LPAREN)) {
-		expression();
+		type_factor = expression();
 		mustBe(T_RPAREN);
 		//Если встретили открывающую скобку, тогда следом может идти любое арифметическое выражение и обязательно
 		//закрывающая скобка.
@@ -188,6 +195,7 @@ void Parser::factor()
 	else {
 		reportError("expression expected.");
 	}
+	return type_factor;
 }
 
 void Parser::relation()
