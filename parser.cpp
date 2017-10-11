@@ -39,6 +39,7 @@ void Parser::statementList()
 
 void Parser::statement()
 {
+	Type type_statement = TYPE_INT;
 	// Если встречаем переменную, то запоминаем ее адрес или добавляем новую если не встретили. 
 	// Следующей лексемой должно быть присваивание. Затем идет блок expression, который возвращает значение на вершину стека.
 	// Записываем это значение по адресу нашей переменной
@@ -46,8 +47,19 @@ void Parser::statement()
 		int varAddress = findOrAddVariable(scanner_->getStringValue());
 		next();
 		mustBe(T_ASSIGN);
-		expression();
-		codegen_->emit(STORE, varAddress);
+		type_statement = expression();
+		if (type_statement == TYPE_INT) {
+			codegen_->emit(STORE, varAddress);
+		}
+		else if (type_statement == TYPE_CMPLX)
+		{
+			codegen_->emit(STORE, varAddress);
+			lastVar_++;
+			varAddress++;
+			codegen_->emit(POP);
+			codegen_->emit(STORE, varAddress);
+		}
+		
 	}
 	// Если встретили IF, то затем должно следовать условие. На вершине стека лежит 1 или 0 в зависимости от выполнения условия.
 	// Затем зарезервируем место для условного перехода JUMP_NO к блоку ELSE (переход в случае ложного условия). Адрес перехода
@@ -94,9 +106,19 @@ void Parser::statement()
 	}
 	else if(match(T_WRITE)) {
 		mustBe(T_LPAREN);
-		expression();
+		Type type_write = expression();
 		mustBe(T_RPAREN);
-		codegen_->emit(PRINT);
+		if (type_write == TYPE_INT)
+		{
+			codegen_->emit(PRINT);
+		}
+		else if (type_write == TYPE_CMPLX)
+		{
+			codegen_->emit(PRINT);
+			codegen_->emit(POP);
+			codegen_->emit(PRINT);
+		}
+		
 	}
 	else {
 		reportError("statement expected.");
@@ -112,8 +134,8 @@ Type Parser::expression()
 		 удаляем его из потока и разбираем очередное слагаемое (вычитаемое). Повторяем проверку и разбор очередного 
 		 терма, пока не встретим за термом символ, отличный от '+' и '-'
      */
-
-	term();
+	Type type_term = TYPE_INT;
+	type_term = term();
 	while(see(T_ADDOP)) {
 		Arithmetic op = scanner_->getArithmeticValue();
 		next();
@@ -126,7 +148,7 @@ Type Parser::expression()
 			codegen_->emit(SUB);
 		}
 	}
-	return TYPE_INT;
+	return type_term;
 }
 
 Type Parser::term()
@@ -167,6 +189,11 @@ Type Parser::factor()
 		//Если встретили число, то преобразуем его в целое и записываем на вершину стека
 	}
 	else if (see(T_COMPLEX)) {
+		int value = scanner_->getIntValue();
+		int cmplx_value = scanner_->getCmplxValue();
+		next();
+		codegen_->emit(PUSH, value);
+		codegen_->emit(PUSH, cmplx_value);
 		type_factor = TYPE_CMPLX;
 	}
 	else if(see(T_IDENTIFIER)) {
