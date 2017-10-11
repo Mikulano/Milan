@@ -29,7 +29,8 @@ enum Token {
 	T_CMP,			// Сводная лексема для операторов отношения
 	T_LPAREN,		// Открывающая скобка
 	T_RPAREN,		// Закрывающая скобка
-	T_SEMICOLON		// ";"
+	T_SEMICOLON,		// ";"
+	T_COMPLEX		//Комплексный литерал
 };
 
 // Функция tokenToString возвращает описание лексемы.
@@ -104,6 +105,11 @@ public:
 	{
 		return intValue_;
 	}
+
+	int getCmplxValue() const
+	{
+		return cmplxValue_;
+	}
 	
 	string getStringValue() const
 	{
@@ -149,7 +155,8 @@ private:
 	int lineNumber_; //номер текущей строки кода
 	
 	Token token_; //текущая лексема
-	int intValue_; //значение текущего целого
+	int intValue_; //значение текущего целого или действительной части комплексного числа
+	int cmplxValue_; //значение мнимой части комплексного числа
 	string stringValue_; //имя переменной
 	Cmp cmpValue_; //значение оператора сравнения (>, <, =, !=, >=, <=)
 	Arithmetic arithmeticValue_; //значение знака (+,-,*,/)
