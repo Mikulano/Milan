@@ -44,7 +44,8 @@ void Parser::statement()
 	// Следующей лексемой должно быть присваивание. Затем идет блок expression, который возвращает значение на вершину стека.
 	// Записываем это значение по адресу нашей переменной
 	if(see(T_IDENTIFIER)) {
-		int varAddress = findOrAddVariable(scanner_->getStringValue());
+		string varName = scanner_->getStringValue();
+		int varAddress = findOrAddVariable(varName);
 		next();
 		mustBe(T_ASSIGN);
 		type_statement = expression();
@@ -53,10 +54,10 @@ void Parser::statement()
 		}
 		else if (type_statement == TYPE_CMPLX)
 		{
+			findAndChangeType(varName, TYPE_CMPLX);
 			codegen_->emit(STORE, varAddress);
 			lastVar_++;
 			varAddress++;
-			codegen_->emit(POP);
 			codegen_->emit(STORE, varAddress);
 		}
 		
@@ -140,12 +141,18 @@ Type Parser::expression()
 		Arithmetic op = scanner_->getArithmeticValue();
 		next();
 		term();
+		if (type_term == TYPE_INT) {
 
-		if(op == A_PLUS) {
-			codegen_->emit(ADD);
+			if(op == A_PLUS) {
+				codegen_->emit(ADD);
+			}
+			else {
+				codegen_->emit(SUB);
+			}
 		}
-		else {
-			codegen_->emit(SUB);
+		else if (type_term == TYPE_CMPLX)
+		{
+			codegen_->emit(STORE, lastVar_);
 		}
 	}
 	return type_term;
@@ -198,9 +205,14 @@ Type Parser::factor()
 	}
 	else if(see(T_IDENTIFIER)) {
 		int varAddress = findOrAddVariable(scanner_->getStringValue());
+		Type varType = getType(scanner_->getStringValue());
 		next();
 		codegen_->emit(LOAD, varAddress);
-		return TYPE_INT; // !!!!!
+		if (varType == TYPE_CMPLX)
+		{
+			codegen_->emit(LOAD, ++varAddress);
+		}
+		return varType; // Возвращает тип переменной
 		//Если встретили переменную, то выгружаем значение, лежащее по ее адресу, на вершину стека 
 	}
 	else if(see(T_ADDOP) && scanner_->getArithmeticValue() == A_MINUS) {
@@ -266,18 +278,34 @@ void Parser::relation()
 	}
 }
 
-int Parser::findOrAddVariable(const string& var)
+int Parser::findOrAddVariable(const string& var, Type type)
 {
 	VarTable::iterator it = variables_.find(var);
 	if(it == variables_.end()) {
-		variables_[var] = lastVar_;
+		variables_[var] = Variable (type, lastVar_);
 		return lastVar_++;
 	}
 	else {
-		return it->second;
+
+		return it->second.second;
 	}
 }
 
+void Parser::findAndChangeType(const string& var, Type type)
+{
+	VarTable::iterator it = variables_.find(var);
+	if (it != variables_.end()) {
+		variables_[var].first = type;
+	}
+}
+Type Parser::getType(const string& var)
+{
+	VarTable::iterator it = variables_.find(var);
+	if (it != variables_.end()) {
+		return variables_[var].first;
+	}
+	else return TYPE_INT;
+}
 void Parser::mustBe(Token t)
 {
 	if(!match(t)) {

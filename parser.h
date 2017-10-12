@@ -56,7 +56,8 @@ public:
 	void parse();	//проводим синтаксический разбор 
 
 private:
-	typedef map<string, int> VarTable;
+	typedef pair<Type, int> Variable;
+	typedef map<string, Variable> VarTable;
 	//описание блоков.
 	void program(); //Разбор программы. BEGIN statementList END
 	void statementList(); // Разбор списка операторов.
@@ -104,9 +105,11 @@ private:
 	//Иначе создаем сообщение об ошибке и пробуем восстановиться
 	void recover(Token t); //восстановление после ошибки: идем по коду до тех пор, 
 	//пока не встретим эту лексему или лексему конца файла.
-	int findOrAddVariable(const string&); //функция пробегает по variables_. 
+	int findOrAddVariable(const string&, Type type = TYPE_INT); //функция пробегает по variables_. 
 	//Если находит нужную переменную - возвращает ее номер, иначе добавляет ее в массив, увеличивает lastVar и возвращает его.
-
+	void findAndChangeType(const string&, Type type = TYPE_INT);//функция пробегает по variables_. 
+	//Если находит нужную переменную - изменяет ее тип.
+	Type getType(const string&);
 	Scanner* scanner_; //лексический анализатор для конструктора
 	CodeGen* codegen_; //указатель на виртуальную машину
 	ostream& output_; //выходной поток (в данном случае используем cout)

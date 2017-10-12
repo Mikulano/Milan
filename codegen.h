@@ -6,6 +6,7 @@
 
 using namespace std;
 
+
 // Инструкции виртуальной машины Милана 
 
 enum Instruction
@@ -33,7 +34,7 @@ enum Instruction
 };
 
 // Класс Command представляет машинные инструкции. 
-
+const int SHIFT = 8; //константа смещения памяти
 class Command
 {
 public:
