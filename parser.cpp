@@ -116,7 +116,6 @@ void Parser::statement()
 		else if (type_write == TYPE_CMPLX)
 		{
 			codegen_->emit(PRINT);
-			codegen_->emit(POP);
 			codegen_->emit(PRINT);
 		}
 		
@@ -152,7 +151,26 @@ Type Parser::expression()
 		}
 		else if (type_term == TYPE_CMPLX)
 		{
-			codegen_->emit(STORE, lastVar_);
+			codegen_->emit(STORE, lastVar_ + SHIFT);
+			codegen_->emit(STORE, lastVar_ + SHIFT + 1);
+			codegen_->emit(STORE, lastVar_ + SHIFT + 2);
+			codegen_->emit(STORE, lastVar_ + SHIFT + 3);
+			if (op == A_PLUS) {
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(ADD);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
+				codegen_->emit(ADD);
+			}
+			else {
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(SUB);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(SUB);
+			}
 		}
 	}
 	return type_term;
@@ -171,12 +189,40 @@ Type Parser::term()
 		Arithmetic op = scanner_->getArithmeticValue();
 		next();
 		factor();	//!!!!!!
-
-		if(op == A_MULTIPLY) {
-			codegen_->emit(MULT);
+		if (type_term == TYPE_INT)
+		{
+			if (op == A_MULTIPLY) {
+				codegen_->emit(MULT);
+			}
+			else {
+				codegen_->emit(DIV);
+			}
 		}
-		else {
-			codegen_->emit(DIV);
+		else if (type_term == TYPE_CMPLX)
+		{
+			codegen_->emit(STORE, lastVar_ + SHIFT);
+			codegen_->emit(STORE, lastVar_ + SHIFT + 1);
+			codegen_->emit(STORE, lastVar_ + SHIFT + 2);
+			codegen_->emit(STORE, lastVar_ + SHIFT + 3);
+			if (op == A_MULTIPLY) {
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(MULT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(MULT);
+				codegen_->emit(ADD);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(MULT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(MULT);
+				codegen_->emit(SUB);
+			}
+			else {
+				codegen_->emit(DIV);
+			}
 		}
 	}
 	return type_term;
