@@ -10,7 +10,8 @@ using namespace std;
 
 enum Type {
 	TYPE_INT,
-	TYPE_CMPLX
+	TYPE_CMPLX,
+	TYPE_UNDEF
 };
 enum Token {
 	T_EOF,			// Конец текстового потока

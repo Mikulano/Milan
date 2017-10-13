@@ -53,10 +53,16 @@ void Parser::statement()
 			codegen_->emit(STORE, varAddress);
 		}
 		else if (type_statement == TYPE_CMPLX)
-		{
-			findAndChangeType(varName, TYPE_CMPLX);
+		{	
+			if (getType(varName) != TYPE_CMPLX)
+			{
+				//ОШИБКА
+			}
+			if (getType(varName) == TYPE_UNDEF) {
+				findAndChangeType(varName, TYPE_CMPLX);
+				lastVar_++;
+		}
 			codegen_->emit(STORE, varAddress);
-			lastVar_++;
 			varAddress++;
 			codegen_->emit(STORE, varAddress);
 		}
@@ -154,21 +160,21 @@ Type Parser::expression()
 			codegen_->emit(STORE, lastVar_ + SHIFT);
 			codegen_->emit(STORE, lastVar_ + SHIFT + 1);
 			codegen_->emit(STORE, lastVar_ + SHIFT + 2);
-			codegen_->emit(STORE, lastVar_ + SHIFT + 3);
-			if (op == A_PLUS) {
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
-				codegen_->emit(ADD);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
+			//codegen_->emit(STORE, lastVar_ + SHIFT + 3);
+			//codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
+			codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+			if (op == A_PLUS){
 				codegen_->emit(ADD);
 			}
 			else {
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
 				codegen_->emit(SUB);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+			}
+			codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+			codegen_->emit(LOAD, lastVar_ + SHIFT);
+			if (op == A_PLUS) {
+				codegen_->emit(ADD);
+			}
+			else {
 				codegen_->emit(SUB);
 			}
 		}
@@ -221,6 +227,34 @@ Type Parser::term()
 				codegen_->emit(SUB);
 			}
 			else {
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(MULT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(MULT);
+				codegen_->emit(SUB);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(MULT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(MULT);
+				codegen_->emit(ADD);
+				codegen_->emit(DIV);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(MULT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(ADD);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(MULT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(MULT);
+				codegen_->emit(ADD);
 				codegen_->emit(DIV);
 			}
 		}
@@ -245,18 +279,22 @@ Type Parser::factor()
 		int value = scanner_->getIntValue();
 		int cmplx_value = scanner_->getCmplxValue();
 		next();
-		codegen_->emit(PUSH, value);
 		codegen_->emit(PUSH, cmplx_value);
+		codegen_->emit(PUSH, value);
 		type_factor = TYPE_CMPLX;
 	}
 	else if(see(T_IDENTIFIER)) {
 		int varAddress = findOrAddVariable(scanner_->getStringValue());
 		Type varType = getType(scanner_->getStringValue());
 		next();
-		codegen_->emit(LOAD, varAddress);
+		if (varType == TYPE_INT)
+		{
+			codegen_->emit(LOAD, varAddress);
+		}
 		if (varType == TYPE_CMPLX)
 		{
 			codegen_->emit(LOAD, ++varAddress);
+			codegen_->emit(LOAD, --varAddress);
 		}
 		return varType; // Возвращает тип переменной
 		//Если встретили переменную, то выгружаем значение, лежащее по ее адресу, на вершину стека 
