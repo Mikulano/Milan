@@ -57,6 +57,7 @@ void Parser::statement()
 			else if (getType(varName) != TYPE_INT)
 			{
 				reportError("variable must be an integer");
+				//Ошибка при попытке перезаписать переменную другого типа
 			}
 			codegen_->emit(STORE, varAddress);
 		}
@@ -69,7 +70,8 @@ void Parser::statement()
 			}
 			else if (getType(varName) != TYPE_CMPLX)
 			{
-				reportError("variable must be a complex");
+				reportError("variable must be a complex"); 
+				//Ошибка при попытке перезаписать переменную другого типа
 			}
 			
 			codegen_->emit(STORE, varAddress);
