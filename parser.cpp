@@ -50,18 +50,28 @@ void Parser::statement()
 		mustBe(T_ASSIGN);
 		type_statement = expression();
 		if (type_statement == TYPE_INT) {
+			//Определяем тип новой переменной
+			if (getType(varName) == TYPE_UNDEF) {
+				findAndChangeType(varName, TYPE_INT);
+			}
+			else if (getType(varName) != TYPE_INT)
+			{
+				//ОШИБКА
+			}
 			codegen_->emit(STORE, varAddress);
 		}
 		else if (type_statement == TYPE_CMPLX)
 		{	
-			if (getType(varName) != TYPE_CMPLX)
-			{
-				//ОШИБКА
-			}
+			//Определяем тип новой переменной. Выделяем память для комплексных чисел
 			if (getType(varName) == TYPE_UNDEF) {
 				findAndChangeType(varName, TYPE_CMPLX);
 				lastVar_++;
-		}
+			}
+			else if (getType(varName) != TYPE_CMPLX)
+			{
+				//ОШИБКА
+			}
+			
 			codegen_->emit(STORE, varAddress);
 			varAddress++;
 			codegen_->emit(STORE, varAddress);
@@ -314,37 +324,72 @@ void Parser::relation()
 {
 	//Условие сравнивает два выражения по какому-либо из знаков. Каждый знак имеет свой номер. В зависимости от 
 	//результата сравнения на вершине стека окажется 0 или 1.
-	expression();
+	Type fstExpression, scndExpession;
+
+	fstExpression = expression();
 	if(see(T_CMP)) {
 		Cmp cmp = scanner_->getCmpValue();
 		next();
-		expression();
-		switch(cmp) {
-			//для знака "=" - номер 0
+		scndExpession = expression();
+		if (fstExpression == TYPE_INT && scndExpession == TYPE_INT) {
+			switch (cmp) {
+				//для знака "=" - номер 0
 			case C_EQ:
 				codegen_->emit(COMPARE, 0);
 				break;
-			//для знака "!=" - номер 1
+				//для знака "!=" - номер 1
 			case C_NE:
 				codegen_->emit(COMPARE, 1);
 				break;
-			//для знака "<" - номер 2
+				//для знака "<" - номер 2
 			case C_LT:
 				codegen_->emit(COMPARE, 2);
 				break;
-			//для знака ">" - номер 3
+				//для знака ">" - номер 3
 			case C_GT:
 				codegen_->emit(COMPARE, 3);
 				break;
-			//для знака "<=" - номер 4
+				//для знака "<=" - номер 4
 			case C_LE:
 				codegen_->emit(COMPARE, 4);
 				break;
-			//для знака ">=" - номер 5
+				//для знака ">=" - номер 5
 			case C_GE:
 				codegen_->emit(COMPARE, 5);
 				break;
-		};
+			};
+		}
+		else if (fstExpression == TYPE_CMPLX && scndExpession == TYPE_CMPLX) {
+			Cmp cmp = scanner_->getCmpValue();
+			if (cmp == C_EQ)	{
+				codegen_->emit(STORE, lastVar_ + SHIFT);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 1);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 2);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(COMPARE, 0);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(COMPARE, 0);
+				codegen_->emit(MULT);
+			}
+			else if (cmp == C_NE) {
+				codegen_->emit(STORE, lastVar_ + SHIFT);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 1);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 2);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(COMPARE, 1);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(COMPARE, 1);
+				codegen_->emit(ADD);
+			}
+			else {
+				reportError("comparison operator is not defined for complex variables.");
+			}
+		}
+		else {
+			reportError("comparison operator is not defined for different type variables.");
+		}
 	}
 	else {
 		reportError("comparison operator expected.");
