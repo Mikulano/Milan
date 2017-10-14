@@ -210,51 +210,40 @@ Type Parser::term()
 			codegen_->emit(STORE, lastVar_ + SHIFT + 1);
 			codegen_->emit(STORE, lastVar_ + SHIFT + 2);
 			codegen_->emit(STORE, lastVar_ + SHIFT + 3);
+			codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
+			codegen_->emit(LOAD, lastVar_ + SHIFT);
+			codegen_->emit(MULT);
+			codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+			codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+			codegen_->emit(MULT);
 			if (op == A_MULTIPLY) {
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
+				codegen_->emit(ADD);
+			}
+			else {
+				codegen_->emit(SUB);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
 				codegen_->emit(LOAD, lastVar_ + SHIFT);
 				codegen_->emit(MULT);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
 				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
 				codegen_->emit(MULT);
 				codegen_->emit(ADD);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
-				codegen_->emit(MULT);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
-				codegen_->emit(MULT);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 4);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 4);
+				codegen_->emit(DIV);
+			}
+			codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+			codegen_->emit(LOAD, lastVar_ + SHIFT);
+			codegen_->emit(MULT);
+			codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
+			codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+			codegen_->emit(MULT);
+			if (op == A_MULTIPLY) {
 				codegen_->emit(SUB);
 			}
 			else {
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
-				codegen_->emit(MULT);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
-				codegen_->emit(MULT);
-				codegen_->emit(SUB);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
-				codegen_->emit(MULT);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
-				codegen_->emit(MULT);
 				codegen_->emit(ADD);
-				codegen_->emit(DIV);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
-				codegen_->emit(MULT);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
-				codegen_->emit(ADD);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
-				codegen_->emit(MULT);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
-				codegen_->emit(MULT);
-				codegen_->emit(ADD);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 4);
 				codegen_->emit(DIV);
 			}
 		}
