@@ -56,7 +56,7 @@ void Parser::statement()
 			}
 			else if (getType(varName) != TYPE_INT)
 			{
-				//ОШИБКА
+				reportError("variable must be an integer");
 			}
 			codegen_->emit(STORE, varAddress);
 		}
@@ -69,7 +69,7 @@ void Parser::statement()
 			}
 			else if (getType(varName) != TYPE_CMPLX)
 			{
-				//ОШИБКА
+				reportError("variable must be a complex");
 			}
 			
 			codegen_->emit(STORE, varAddress);
@@ -155,7 +155,26 @@ Type Parser::expression()
 	while(see(T_ADDOP)) {
 		Arithmetic op = scanner_->getArithmeticValue();
 		next();
-		term();
+		Type type_fstFactor = type_term;
+		Type type_scndFactor = term();
+		//приведение типов
+		if (type_scndFactor != type_fstFactor) {
+			type_term = TYPE_CMPLX;
+			if (type_fstFactor == TYPE_INT) {
+				codegen_->emit(STORE, lastVar_ + SHIFT);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 1);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 2);
+				codegen_->emit(PUSH, 0);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+			}
+			else {
+				codegen_->emit(STORE, lastVar_ + SHIFT);
+				codegen_->emit(PUSH, 0);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+			}
+		}
 		if (type_term == TYPE_INT) {
 
 			if(op == A_PLUS) {
@@ -204,7 +223,26 @@ Type Parser::term()
 	while(see(T_MULOP)) {
 		Arithmetic op = scanner_->getArithmeticValue();
 		next();
-		factor();	//!!!!!!
+		Type type_fstFactor = type_term;
+		Type type_scndFactor = factor();
+		//приведение типов
+		if (type_scndFactor != type_fstFactor) {
+			type_term = TYPE_CMPLX;
+			if (type_fstFactor == TYPE_INT){
+				codegen_->emit(STORE, lastVar_ + SHIFT);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 1);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 2);
+				codegen_->emit(PUSH, 0);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+			}
+			else {
+				codegen_->emit(STORE, lastVar_ + SHIFT);
+				codegen_->emit(PUSH, 0);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+			}
+		}
 		if (type_term == TYPE_INT)
 		{
 			if (op == A_MULTIPLY) {
@@ -295,13 +333,21 @@ Type Parser::factor()
 			codegen_->emit(LOAD, ++varAddress);
 			codegen_->emit(LOAD, --varAddress);
 		}
-		return varType; // Возвращает тип переменной
+		type_factor = varType; // Возвращает тип переменной
 		//Если встретили переменную, то выгружаем значение, лежащее по ее адресу, на вершину стека 
 	}
 	else if(see(T_ADDOP) && scanner_->getArithmeticValue() == A_MINUS) {
 		next();
 		type_factor = factor();
-		codegen_->emit(INVERT);
+		if (type_factor == TYPE_INT) {
+			codegen_->emit(INVERT);
+		}
+		else {
+			codegen_->emit(INVERT);
+			codegen_->emit(STORE, lastVar_ + SHIFT);
+			codegen_->emit(INVERT);
+			codegen_->emit(LOAD, lastVar_ + SHIFT);
+		}
 		//Если встретили знак "-", и за ним <factor> то инвертируем значение, лежащее на вершине стека
 	}
 	else if(match(T_LPAREN)) {
