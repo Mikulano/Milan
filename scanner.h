@@ -36,7 +36,8 @@ enum Token {
 	T_LPAREN,		// Открывающая скобка
 	T_RPAREN,		// Закрывающая скобка
 	T_SEMICOLON,		// ";"
-	T_COMPLEX		//Комплексный литерал
+	T_COMPLEX,		//Комплексный литерал
+	T_TYPE			//Тип переменной
 };
 
 // Функция tokenToString возвращает описание лексемы.
@@ -83,6 +84,8 @@ public:
 		keywords_["od"] = T_OD;
 		keywords_["write"] = T_WRITE;
 		keywords_["read"] = T_READ;
+		keywords_["int"] = T_TYPE;
+		keywords_["complex"] = T_TYPE;
 
 		nextChar();
 	}
@@ -121,7 +124,12 @@ public:
 	{
 		return stringValue_;
 	}
-	
+
+	string getTypeValue() const
+	{
+		return typeValue_;
+	}
+
 	Cmp getCmpValue() const
 	{
 		return cmpValue_;
@@ -164,6 +172,7 @@ private:
 	int intValue_; //значение текущего целого или действительной части комплексного числа
 	int cmplxValue_; //значение мнимой части комплексного числа
 	string stringValue_; //имя переменной
+	string typeValue_; //тип переменной для чтения
 	Cmp cmpValue_; //значение оператора сравнения (>, <, =, !=, >=, <=)
 	Arithmetic arithmeticValue_; //значение знака (+,-,*,/)
 

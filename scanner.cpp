@@ -28,6 +28,8 @@ static const char * tokenNames_[] = {
 	"'('",
 	"')'",
 	"';'",
+	"complex",
+	"type",
 };
 
 void Scanner::nextToken()
@@ -124,6 +126,9 @@ void Scanner::nextToken()
 		}
 		else {
 			token_ = kwd->second;
+			if (kwd->second == T_TYPE) {
+				typeValue_ = buffer;
+			}
 		}
 	}
 	//Символ не является буквой, цифрой, "/" или признаком конца файла

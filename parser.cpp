@@ -359,7 +359,27 @@ Type Parser::factor()
 		//закрывающая скобка.
 	}
 	else if(match(T_READ)) {
-		codegen_->emit(INPUT);
+		if (match(T_LPAREN)) {
+			mustBe(T_TYPE);
+			if (scanner_->getTypeValue() == "int") {
+				codegen_->emit(INPUT);
+				type_factor = TYPE_INT;
+			}
+			else if (scanner_->getTypeValue() == "complex") {
+				codegen_->emit(INPUT);
+				codegen_->emit(STORE, lastVar_ + SHIFT);
+				codegen_->emit(INPUT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				type_factor = TYPE_CMPLX;
+			}
+			else {
+				reportError("Uknown type using");
+			}
+			mustBe(T_RPAREN);
+		}
+		else {
+			codegen_->emit(INPUT);
+		}
 		//Если встретили зарезервированное слово READ, то записываем на вершину стека идет запись со стандартного ввода
 	}
 	else {
