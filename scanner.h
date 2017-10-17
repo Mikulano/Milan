@@ -11,6 +11,7 @@ using namespace std;
 enum Type {
 	TYPE_INT,
 	TYPE_CMPLX,
+	TYPE_BOOL,
 	TYPE_UNDEF
 };
 enum Token {
@@ -37,7 +38,9 @@ enum Token {
 	T_RPAREN,		// Закрывающая скобка
 	T_SEMICOLON,		// ";"
 	T_COMPLEX,		//Комплексный литерал
-	T_TYPE			//Тип переменной
+	T_TYPE,			//Тип переменной
+	T_BOOL,			//Логическая переменная
+	T_UNAR			//Унарная логическая операция
 };
 
 // Функция tokenToString возвращает описание лексемы.
@@ -56,10 +59,15 @@ enum Cmp {
 
 // Виды арифметических операций
 enum Arithmetic {
-	A_PLUS,		//операция "+"
-	A_MINUS,	//операция "-"
-	A_MULTIPLY,	//операция "*"
-	A_DIVIDE	//операция "/"
+	A_PLUS,			//операция "+"
+	A_MINUS,		//операция "-"
+	A_MULTIPLY,		//операция "*"
+	A_DIVIDE,		//операция "/"
+	A_OR,			//операция "&"
+	A_AND,			//операция "|"
+	A_XOR,			//операция "^"
+	A_IMPLICATION,	//операция "->"
+	A_INVERSE		//операция "!"
 };
 
 // Лексический анализатор
@@ -86,6 +94,9 @@ public:
 		keywords_["read"] = T_READ;
 		keywords_["int"] = T_TYPE;
 		keywords_["complex"] = T_TYPE;
+		keywords_["bool"] = T_TYPE;
+		keywords_["true"] = T_BOOL;
+		keywords_["false"] = T_BOOL;
 
 		nextChar();
 	}
@@ -108,6 +119,11 @@ public:
 	Token token() const
 	{
 		return token_;
+	}
+
+	bool getBoolValue() const
+	{
+		return boolValue_;
 	}
 	
 	int getIntValue() const
@@ -169,6 +185,7 @@ private:
 	int lineNumber_; //номер текущей строки кода
 	
 	Token token_; //текущая лексема
+	bool boolValue_; //значение логической переменной
 	int intValue_; //значение текущего целого или действительной части комплексного числа
 	int cmplxValue_; //значение мнимой части комплексного числа
 	string stringValue_; //имя переменной

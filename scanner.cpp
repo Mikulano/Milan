@@ -30,6 +30,8 @@ static const char * tokenNames_[] = {
 	"';'",
 	"complex",
 	"type",
+	"bool",
+	"!",
 };
 
 void Scanner::nextToken()
@@ -126,8 +128,16 @@ void Scanner::nextToken()
 		}
 		else {
 			token_ = kwd->second;
-			if (kwd->second == T_TYPE) {
+			if (kwd->second == T_TYPE) {		//запоминание типа
 				typeValue_ = buffer;
+			}
+			else if (kwd->second == T_BOOL) {	//запоминание значения логической переменной
+				if (kwd->first == "true") {
+					boolValue_ = true;
+				}
+				else {
+					boolValue_ = false;
+				}
 			}
 		}
 	}
@@ -196,7 +206,8 @@ void Scanner::nextToken()
 					cmpValue_ = C_NE;
 				}
 				else {
-					token_ = T_ILLEGAL;
+					token_ = T_UNAR;
+					arithmeticValue_ = A_INVERSE;
 				}
 				break;
 			//Если встретим "=" - лексема сравнения и знак "="

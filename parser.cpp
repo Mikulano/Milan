@@ -78,6 +78,18 @@ void Parser::statement()
 			varAddress++;
 			codegen_->emit(STORE, varAddress);
 		}
+		else if (type_statement == TYPE_BOOL) {
+			if (getType(varName) == TYPE_UNDEF) {
+				//Определяем тип новой переменной.
+				findAndChangeType(varName, TYPE_BOOL);
+			}
+			else if (getType(varName) != TYPE_BOOL)
+			{
+				reportError("variable must be a bool");
+				//Ошибка при попытке перезаписать переменную другого типа
+			}
+			codegen_->emit(STORE, varAddress);
+		}
 		
 	}
 	// Если встретили IF, то затем должно следовать условие. На вершине стека лежит 1 или 0 в зависимости от выполнения условия.
@@ -127,7 +139,7 @@ void Parser::statement()
 		mustBe(T_LPAREN);
 		Type type_write = expression();
 		mustBe(T_RPAREN);
-		if (type_write == TYPE_INT)
+		if (type_write == TYPE_INT || type_write == TYPE_BOOL)
 		{
 			codegen_->emit(PRINT);
 		}
@@ -147,10 +159,12 @@ Type Parser::expression()
 {
 
 	 /*
-         Арифметическое выражение описывается следующими правилами: <expression> -> <term> | <term> + <term> | <term> - <term>
+         Арифметическое выражение описывается следующими правилами:
+		 <expression> -> <term> | <term> + <term> | <term> - <term> | <bool_term> || <bool_term> 
          При разборе сначала смотрим первый терм, затем анализируем очередной символ. Если это '+' или '-', 
 		 удаляем его из потока и разбираем очередное слагаемое (вычитаемое). Повторяем проверку и разбор очередного 
 		 терма, пока не встретим за термом символ, отличный от '+' и '-'
+		 Если выражение имеет тип bool, то разрешается использовать логическое "или"
      */
 	Type type_term = TYPE_INT;
 	type_term = term();
@@ -177,6 +191,7 @@ Type Parser::expression()
 				codegen_->emit(LOAD, lastVar_ + SHIFT);
 			}
 		}
+		//вычисление сложения или вычитания в зависимости от типов
 		if (type_term == TYPE_INT) {
 
 			if(op == A_PLUS) {
@@ -186,8 +201,7 @@ Type Parser::expression()
 				codegen_->emit(SUB);
 			}
 		}
-		else if (type_term == TYPE_CMPLX)
-		{
+		else if (type_term == TYPE_CMPLX) {
 			codegen_->emit(STORE, lastVar_ + SHIFT);
 			codegen_->emit(STORE, lastVar_ + SHIFT + 1);
 			codegen_->emit(STORE, lastVar_ + SHIFT + 2);
@@ -207,6 +221,18 @@ Type Parser::expression()
 			}
 			else {
 				codegen_->emit(SUB);
+			}
+		}
+		else if (type_term == TYPE_BOOL) {
+			if (op == A_PLUS) {
+				codegen_->emit(ADD);
+				codegen_->emit(PUSH, 1);
+				codegen_->emit(COMPARE, 5);
+			}
+			else {
+				codegen_->emit(SUB);
+				codegen_->emit(PUSH, 0);
+				codegen_->emit(COMPARE, 1);
 			}
 		}
 	}
@@ -245,7 +271,8 @@ Type Parser::term()
 				codegen_->emit(LOAD, lastVar_ + SHIFT);
 			}
 		}
-		if (type_term == TYPE_INT)
+		//вычисление умножения и деления
+		if (type_term == TYPE_INT || type_term == TYPE_BOOL)
 		{
 			if (op == A_MULTIPLY) {
 				codegen_->emit(MULT);
@@ -306,7 +333,7 @@ Type Parser::factor()
 	Type type_factor = TYPE_INT;
 	/*
 		Множитель описывается следующими правилами:
-		<factor> -> number | identifier | -<factor> | (<expression>) | READ
+		<factor> -> number | complex | bool | identifier | -<factor> | (<expression>) | READ
 	*/
 	if(see(T_NUMBER)) {
 		int value = scanner_->getIntValue();
@@ -316,21 +343,27 @@ Type Parser::factor()
 	}
 	else if (see(T_COMPLEX)) {
 		int value = scanner_->getIntValue();
-		int cmplx_value = scanner_->getCmplxValue();
+		int cmplxValue = scanner_->getCmplxValue();
 		next();
-		codegen_->emit(PUSH, cmplx_value);
+		codegen_->emit(PUSH, cmplxValue);
 		codegen_->emit(PUSH, value);
 		type_factor = TYPE_CMPLX;
+	}
+	else if (see(T_BOOL)) {
+		int value = scanner_->getBoolValue() ? 1 : 0;
+		next();
+		codegen_->emit(PUSH, value);
+		type_factor = TYPE_BOOL;
 	}
 	else if(see(T_IDENTIFIER)) {
 		int varAddress = findOrAddVariable(scanner_->getStringValue());
 		Type varType = getType(scanner_->getStringValue());
 		next();
-		if (varType == TYPE_INT)
+		if (varType == TYPE_INT || varType == TYPE_BOOL)
 		{
 			codegen_->emit(LOAD, varAddress);
 		}
-		if (varType == TYPE_CMPLX)
+		else if (varType == TYPE_CMPLX)
 		{
 			codegen_->emit(LOAD, ++varAddress);
 			codegen_->emit(LOAD, --varAddress);
@@ -344,13 +377,25 @@ Type Parser::factor()
 		if (type_factor == TYPE_INT) {
 			codegen_->emit(INVERT);
 		}
-		else {
+		else if (type_factor == TYPE_CMPLX) {
 			codegen_->emit(INVERT);
 			codegen_->emit(STORE, lastVar_ + SHIFT);
 			codegen_->emit(INVERT);
 			codegen_->emit(LOAD, lastVar_ + SHIFT);
 		}
 		//Если встретили знак "-", и за ним <factor> то инвертируем значение, лежащее на вершине стека
+	}
+	else if (see(T_UNAR) && scanner_->getArithmeticValue() == A_INVERSE) {
+		//Если встретили знак "!", и за ним <factor> то логически инвертируем значение, лежащее на вершине стека
+		next();
+		type_factor = factor();
+		if (type_factor == TYPE_BOOL) {
+			codegen_->emit(PUSH, 0);
+			codegen_->emit(COMPARE, 0);
+		}
+		else {
+			reportError("Bool variable expected");
+		}
 	}
 	else if(match(T_LPAREN)) {
 		type_factor = expression();
@@ -371,6 +416,10 @@ Type Parser::factor()
 				codegen_->emit(INPUT);
 				codegen_->emit(LOAD, lastVar_ + SHIFT);
 				type_factor = TYPE_CMPLX;
+			}
+			else if (scanner_->getTypeValue() == "bool") {
+				codegen_->emit(INPUT);
+				type_factor = TYPE_BOOL;
 			}
 			else {
 				reportError("Uknown type using");
