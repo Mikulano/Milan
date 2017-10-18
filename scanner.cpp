@@ -197,7 +197,7 @@ void Scanner::nextToken()
 				}
 				break;
 			//Если встретим "!", то дальше должно быть "=", тогда считаем, что получили лексему сравнения 
-			//и знак "!=" иначе считаем, что у нас лексема ошибки
+			//и знак "!=" иначе считаем, что у нас лексема логической инверсии
 			case '!':
 				nextChar();
 				if(ch_ == '=') {
@@ -216,8 +216,8 @@ void Scanner::nextToken()
 				cmpValue_ = C_EQ;
 				nextChar();
 				break;
-			//Знаки операций. Для "+"/"-" получим лексему операции типа сложнения, и соответствующую операцию.
-			//для "*" - лексему операции типа умножения
+			//Знаки операций. Для "+"/"-"/"|" получим лексему операции типа сложнения, и соответствующую операцию.
+			//для "*"/"&" - лексему операции типа умножения
 			case '+':
 				token_ = T_ADDOP;
 				arithmeticValue_ = A_PLUS;
@@ -233,6 +233,16 @@ void Scanner::nextToken()
 			case '*':
 				token_ = T_MULOP;
 				arithmeticValue_ = A_MULTIPLY;
+				nextChar();
+				break;
+			case '&':
+				token_ = T_MULOP;
+				arithmeticValue_ = A_AND;
+				nextChar();
+				break;
+			case '|':
+				token_ = T_ADDOP;
+				arithmeticValue_ = A_OR;
 				nextChar();
 				break;
 			//Иначе лексема ошибки.

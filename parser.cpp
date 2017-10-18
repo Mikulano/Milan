@@ -197,7 +197,7 @@ Type Parser::expression()
 			if(op == A_PLUS) {
 				codegen_->emit(ADD);
 			}
-			else {
+			else if (op == A_MINUS) {
 				codegen_->emit(SUB);
 			}
 		}
@@ -205,13 +205,11 @@ Type Parser::expression()
 			codegen_->emit(STORE, lastVar_ + SHIFT);
 			codegen_->emit(STORE, lastVar_ + SHIFT + 1);
 			codegen_->emit(STORE, lastVar_ + SHIFT + 2);
-			//codegen_->emit(STORE, lastVar_ + SHIFT + 3);
-			//codegen_->emit(LOAD, lastVar_ + SHIFT + 3);
 			codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
 			if (op == A_PLUS){
 				codegen_->emit(ADD);
 			}
-			else {
+			else if (op == A_MINUS) {
 				codegen_->emit(SUB);
 			}
 			codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
@@ -219,17 +217,17 @@ Type Parser::expression()
 			if (op == A_PLUS) {
 				codegen_->emit(ADD);
 			}
-			else {
+			else if (op == A_MINUS) {
 				codegen_->emit(SUB);
 			}
 		}
 		else if (type_term == TYPE_BOOL) {
-			if (op == A_PLUS) {
+			if (op == A_PLUS || op == A_OR) {
 				codegen_->emit(ADD);
 				codegen_->emit(PUSH, 1);
 				codegen_->emit(COMPARE, 5);
 			}
-			else {
+			else if (op == A_MINUS) {
 				codegen_->emit(SUB);
 				codegen_->emit(PUSH, 0);
 				codegen_->emit(COMPARE, 1);
@@ -242,7 +240,8 @@ Type Parser::expression()
 Type Parser::term()
 {
 	 /*  
-		 Терм описывается следующими правилами: <expression> -> <factor> | <factor> + <factor> | <factor> - <factor>
+		 Терм описывается следующими правилами:
+		 <expression> -> <factor> | <factor> + <factor> | <factor> - <factor> | <factor> & <factor>
          При разборе сначала смотрим первый множитель, затем анализируем очередной символ. Если это '*' или '/', 
 		 удаляем его из потока и разбираем очередное слагаемое (вычитаемое). Повторяем проверку и разбор очередного 
 		 множителя, пока не встретим за ним символ, отличный от '*' и '/' 
@@ -277,8 +276,14 @@ Type Parser::term()
 			if (op == A_MULTIPLY) {
 				codegen_->emit(MULT);
 			}
-			else {
+			else if (op == A_DIVIDE) {
 				codegen_->emit(DIV);
+			}
+			else if (op == A_AND && type_term == TYPE_BOOL) {
+				codegen_->emit(MULT);
+			}
+			else {
+				reportError("Unexpected operation for this type");
 			}
 		}
 		else if (type_term == TYPE_CMPLX)
@@ -296,7 +301,7 @@ Type Parser::term()
 			if (op == A_MULTIPLY) {
 				codegen_->emit(ADD);
 			}
-			else {
+			else if (op == A_DIVIDE)  {
 				codegen_->emit(SUB);
 				codegen_->emit(LOAD, lastVar_ + SHIFT);
 				codegen_->emit(LOAD, lastVar_ + SHIFT);
@@ -318,10 +323,13 @@ Type Parser::term()
 			if (op == A_MULTIPLY) {
 				codegen_->emit(SUB);
 			}
-			else {
+			else if (op == A_DIVIDE) {
 				codegen_->emit(ADD);
 				codegen_->emit(LOAD, lastVar_ + SHIFT + 4);
 				codegen_->emit(DIV);
+			}
+			else {
+				reportError("Unexpected operation for this type");
 			}
 		}
 	}
@@ -334,6 +342,7 @@ Type Parser::factor()
 	/*
 		Множитель описывается следующими правилами:
 		<factor> -> number | complex | bool | identifier | -<factor> | (<expression>) | READ
+		| !<factor> |
 	*/
 	if(see(T_NUMBER)) {
 		int value = scanner_->getIntValue();
