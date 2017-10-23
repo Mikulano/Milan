@@ -32,6 +32,8 @@ static const char * tokenNames_[] = {
 	"type",
 	"bool",
 	"!",
+	"&",
+	"|",
 	"'->' or '^'",
 };
 
@@ -245,12 +247,12 @@ void Scanner::nextToken()
 				nextChar();
 				break;
 			case '&':
-				token_ = T_MULOP;
+				token_ = T_LOGICAND;
 				arithmeticValue_ = A_AND;
 				nextChar();
 				break;
 			case '|':
-				token_ = T_ADDOP;
+				token_ = T_LOGICOR;
 				arithmeticValue_ = A_OR;
 				nextChar();
 				break;

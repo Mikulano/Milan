@@ -156,12 +156,12 @@ void Parser::statement()
 }
 Type Parser::expression()
 {
-	Type type_logic = arithmetic();
+	Type type_logic = logicOr();
 		while (see(T_LOGIC)) {
 			Arithmetic op = scanner_->getArithmeticValue();
 			next();
 			Type type_fstFactor = type_logic;
-			Type type_scndFactor = arithmetic();
+			Type type_scndFactor = logicOr();
 			if (type_fstFactor == type_scndFactor && type_fstFactor == TYPE_BOOL) {
 				if (op == A_IMPLICATION) {
 					codegen_->emit(COMPARE, 4);
@@ -175,6 +175,112 @@ Type Parser::expression()
 			}
 		}
 	return type_logic;
+}
+Type Parser::logicOr() {
+	Type fstLogic = logicAnd();
+	while (see(T_LOGICOR)) {
+		next();
+		Type sndLogic = logicAnd();
+		if (fstLogic == TYPE_BOOL && sndLogic == TYPE_BOOL) {
+			codegen_->emit(ADD);
+			codegen_->emit(PUSH, 1);
+			codegen_->emit(COMPARE, 5);
+		}
+		else {
+			reportError("a bool expression expected");
+		}
+	}
+	return fstLogic;
+}
+Type Parser::logicAnd() {
+	Type fstLogic = relationTerm();
+	while (see(T_LOGICAND)) {
+		next();
+		Type sndLogic = relationTerm();
+		if (fstLogic == TYPE_BOOL && sndLogic == TYPE_BOOL) {
+			codegen_->emit(MULT);
+		}
+		else {
+			reportError("a bool expression expected");
+		}
+	}
+	return fstLogic;
+}
+Type Parser::relationTerm()
+{
+	//Условие сравнивает два выражения по какому-либо из знаков. Каждый знак имеет свой номер. В зависимости от 
+	//результата сравнения на вершине стека окажется 0 или 1.
+	Type fstExpression, scndExpession;
+
+	fstExpression = arithmetic();
+	if (see(T_CMP)) {
+		Cmp cmp = scanner_->getCmpValue();
+		next();
+		scndExpession = arithmetic();
+		if ((fstExpression == TYPE_INT || fstExpression == TYPE_BOOL) && (scndExpession == TYPE_INT || scndExpession == TYPE_BOOL)) {
+			switch (cmp) {
+				//для знака "=" - номер 0
+			case C_EQ:
+				codegen_->emit(COMPARE, 0);
+				break;
+				//для знака "!=" - номер 1
+			case C_NE:
+				codegen_->emit(COMPARE, 1);
+				break;
+				//для знака "<" - номер 2
+			case C_LT:
+				codegen_->emit(COMPARE, 2);
+				break;
+				//для знака ">" - номер 3
+			case C_GT:
+				codegen_->emit(COMPARE, 3);
+				break;
+				//для знака "<=" - номер 4
+			case C_LE:
+				codegen_->emit(COMPARE, 4);
+				break;
+				//для знака ">=" - номер 5
+			case C_GE:
+				codegen_->emit(COMPARE, 5);
+				break;
+			};
+		}
+		else if (fstExpression == TYPE_CMPLX && scndExpession == TYPE_CMPLX) {
+			Cmp cmp = scanner_->getCmpValue();
+			if (cmp == C_EQ) {
+				codegen_->emit(STORE, lastVar_ + SHIFT);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 1);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 2);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(COMPARE, 0);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(COMPARE, 0);
+				codegen_->emit(MULT);
+			}
+			else if (cmp == C_NE) {
+				codegen_->emit(STORE, lastVar_ + SHIFT);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 1);
+				codegen_->emit(STORE, lastVar_ + SHIFT + 2);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+				codegen_->emit(COMPARE, 1);
+				codegen_->emit(LOAD, lastVar_ + SHIFT);
+				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+				codegen_->emit(COMPARE, 1);
+				codegen_->emit(ADD);
+				codegen_->emit(PUSH, 1);
+				codegen_->emit(COMPARE, 5);
+			}
+			else {
+				reportError("comparison operator is not defined for complex variables.");
+			}
+		}
+		else {
+			reportError("comparison operator is not defined for different type variables.");
+		}
+		fstExpression = TYPE_BOOL;
+	}
+	return fstExpression;
 }
 Type Parser::arithmetic()
 {
@@ -246,7 +352,7 @@ Type Parser::arithmetic()
 			}
 		}
 		else if (type_term == TYPE_BOOL) {
-			if (op == A_PLUS || op == A_OR) {
+			if (op == A_PLUS) {
 				codegen_->emit(ADD);
 				codegen_->emit(PUSH, 1);
 				codegen_->emit(COMPARE, 5);
@@ -265,7 +371,7 @@ Type Parser::term()
 {
 	 /*  
 		 Терм описывается следующими правилами:
-		 <expression> -> <factor> | <factor> + <factor> | <factor> - <factor> | <factor> & <factor>
+		 <expression> -> <factor> | <factor> * <factor> | <factor> / <factor> | <factor> & <factor>
          При разборе сначала смотрим первый множитель, затем анализируем очередной символ. Если это '*' или '/', 
 		 удаляем его из потока и разбираем очередное слагаемое (вычитаемое). Повторяем проверку и разбор очередного 
 		 множителя, пока не встретим за ним символ, отличный от '*' и '/' 
@@ -305,9 +411,6 @@ Type Parser::term()
 			}
 			else if (op == A_DIVIDE) {
 				codegen_->emit(DIV);
-			}
-			else if (op == A_AND && type_term == TYPE_BOOL) {
-				codegen_->emit(MULT);
 			}
 			else {
 				reportError("Unexpected operation for this type");
@@ -369,7 +472,7 @@ Type Parser::factor()
 	/*
 		Множитель описывается следующими правилами:
 		<factor> -> number | complex | bool | identifier | -<factor> | (<expression>) | READ
-		| !<factor> |
+		| !<factor>
 	*/
 	if(see(T_NUMBER)) {
 		int value = scanner_->getIntValue();
@@ -475,80 +578,10 @@ Type Parser::factor()
 	}
 	return type_factor;
 }
-
-void Parser::relation()
-{
-	//Условие сравнивает два выражения по какому-либо из знаков. Каждый знак имеет свой номер. В зависимости от 
-	//результата сравнения на вершине стека окажется 0 или 1.
-	Type fstExpression, scndExpession;
-
-	fstExpression = expression();
-	if(see(T_CMP)) {
-		Cmp cmp = scanner_->getCmpValue();
-		next();
-		scndExpession = expression();
-		if ((fstExpression == TYPE_INT || fstExpression == TYPE_BOOL) && (scndExpession == TYPE_INT || scndExpession == TYPE_BOOL)) {
-			switch (cmp) {
-				//для знака "=" - номер 0
-			case C_EQ:
-				codegen_->emit(COMPARE, 0);
-				break;
-				//для знака "!=" - номер 1
-			case C_NE:
-				codegen_->emit(COMPARE, 1);
-				break;
-				//для знака "<" - номер 2
-			case C_LT:
-				codegen_->emit(COMPARE, 2);
-				break;
-				//для знака ">" - номер 3
-			case C_GT:
-				codegen_->emit(COMPARE, 3);
-				break;
-				//для знака "<=" - номер 4
-			case C_LE:
-				codegen_->emit(COMPARE, 4);
-				break;
-				//для знака ">=" - номер 5
-			case C_GE:
-				codegen_->emit(COMPARE, 5);
-				break;
-			};
-		}
-		else if (fstExpression == TYPE_CMPLX && scndExpession == TYPE_CMPLX) {
-			Cmp cmp = scanner_->getCmpValue();
-			if (cmp == C_EQ)	{
-				codegen_->emit(STORE, lastVar_ + SHIFT);
-				codegen_->emit(STORE, lastVar_ + SHIFT + 1);
-				codegen_->emit(STORE, lastVar_ + SHIFT + 2);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
-				codegen_->emit(COMPARE, 0);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
-				codegen_->emit(COMPARE, 0);
-				codegen_->emit(MULT);
-			}
-			else if (cmp == C_NE) {
-				codegen_->emit(STORE, lastVar_ + SHIFT);
-				codegen_->emit(STORE, lastVar_ + SHIFT + 1);
-				codegen_->emit(STORE, lastVar_ + SHIFT + 2);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
-				codegen_->emit(COMPARE, 1);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
-				codegen_->emit(COMPARE, 1);
-				codegen_->emit(ADD);
-			}
-			else {
-				reportError("comparison operator is not defined for complex variables.");
-			}
-		}
-		else {
-			reportError("comparison operator is not defined for different type variables.");
-		}
-	}
-	else if (fstExpression != TYPE_BOOL) {
-		reportError("comparison operator or a bool expression expected.");
+void Parser::relation() {
+	if (expression() != TYPE_BOOL)
+	{
+		reportError("A bool variable expected");
 	}
 }
 
