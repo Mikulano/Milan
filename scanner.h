@@ -9,9 +9,9 @@
 using namespace std;
 
 enum Type {
+	TYPE_BOOL,
 	TYPE_INT,
 	TYPE_CMPLX,
-	TYPE_BOOL,
 	TYPE_UNDEF
 };
 enum Token {

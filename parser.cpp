@@ -195,22 +195,26 @@ Type Parser::arithmetic()
 		Type type_scndFactor = term();
 		//приведение типов
 		if (type_scndFactor != type_fstFactor) {
-			type_term = TYPE_CMPLX;
-			if (type_fstFactor == TYPE_INT) {
-				codegen_->emit(STORE, lastVar_ + SHIFT);
-				codegen_->emit(STORE, lastVar_ + SHIFT + 1);
-				codegen_->emit(STORE, lastVar_ + SHIFT + 2);
-				codegen_->emit(PUSH, 0);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
-			}
-			else {
-				codegen_->emit(STORE, lastVar_ + SHIFT);
-				codegen_->emit(PUSH, 0);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
+			// Выбирается тот тип, приоритет которого больше
+			type_term = (type_fstFactor > type_scndFactor)? type_fstFactor: type_scndFactor;
+			if (type_term == TYPE_CMPLX) {
+				if (type_fstFactor != TYPE_CMPLX) {
+					codegen_->emit(STORE, lastVar_ + SHIFT);
+					codegen_->emit(STORE, lastVar_ + SHIFT + 1);
+					codegen_->emit(STORE, lastVar_ + SHIFT + 2);
+					codegen_->emit(PUSH, 0);
+					codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+					codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+					codegen_->emit(LOAD, lastVar_ + SHIFT);
+				}
+				else {
+					codegen_->emit(STORE, lastVar_ + SHIFT);
+					codegen_->emit(PUSH, 0);
+					codegen_->emit(LOAD, lastVar_ + SHIFT);
+				}
 			}
 		}
+		
 		//вычисление сложения или вычитания в зависимости от типов
 		if (type_term == TYPE_INT) {
 
@@ -274,20 +278,23 @@ Type Parser::term()
 		Type type_scndFactor = factor();
 		//приведение типов
 		if (type_scndFactor != type_fstFactor) {
-			type_term = TYPE_CMPLX;
-			if (type_fstFactor == TYPE_INT){
-				codegen_->emit(STORE, lastVar_ + SHIFT);
-				codegen_->emit(STORE, lastVar_ + SHIFT + 1);
-				codegen_->emit(STORE, lastVar_ + SHIFT + 2);
-				codegen_->emit(PUSH, 0);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
-				codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
-			}
-			else {
-				codegen_->emit(STORE, lastVar_ + SHIFT);
-				codegen_->emit(PUSH, 0);
-				codegen_->emit(LOAD, lastVar_ + SHIFT);
+			// Выбирается тот тип, приоритет которого больше
+			type_term = (type_fstFactor > type_scndFactor) ? type_fstFactor : type_scndFactor;
+			if (type_term == TYPE_CMPLX) {
+				if (type_fstFactor != TYPE_CMPLX) {
+					codegen_->emit(STORE, lastVar_ + SHIFT);
+					codegen_->emit(STORE, lastVar_ + SHIFT + 1);
+					codegen_->emit(STORE, lastVar_ + SHIFT + 2);
+					codegen_->emit(PUSH, 0);
+					codegen_->emit(LOAD, lastVar_ + SHIFT + 2);
+					codegen_->emit(LOAD, lastVar_ + SHIFT + 1);
+					codegen_->emit(LOAD, lastVar_ + SHIFT);
+				}
+				else {
+					codegen_->emit(STORE, lastVar_ + SHIFT);
+					codegen_->emit(PUSH, 0);
+					codegen_->emit(LOAD, lastVar_ + SHIFT);
+				}
 			}
 		}
 		//вычисление умножения и деления
@@ -448,6 +455,9 @@ Type Parser::factor()
 			}
 			else if (scanner_->getTypeValue() == "bool") {
 				codegen_->emit(INPUT);
+				//преобразование в true (1) любое отличное от нуля число
+				codegen_->emit(PUSH, 0);
+				codegen_->emit(COMPARE, 1);
 				type_factor = TYPE_BOOL;
 			}
 			else {
@@ -477,7 +487,7 @@ void Parser::relation()
 		Cmp cmp = scanner_->getCmpValue();
 		next();
 		scndExpession = expression();
-		if (fstExpression == TYPE_INT && scndExpession == TYPE_INT) {
+		if ((fstExpression == TYPE_INT || fstExpression == TYPE_BOOL) && (scndExpession == TYPE_INT || scndExpession == TYPE_BOOL)) {
 			switch (cmp) {
 				//для знака "=" - номер 0
 			case C_EQ:
@@ -537,8 +547,8 @@ void Parser::relation()
 			reportError("comparison operator is not defined for different type variables.");
 		}
 	}
-	else {
-		reportError("comparison operator expected.");
+	else if (fstExpression != TYPE_BOOL) {
+		reportError("comparison operator or a bool expression expected.");
 	}
 }
 
