@@ -62,7 +62,8 @@ private:
 	void program(); //Разбор программы. BEGIN statementList END
 	void statementList(); // Разбор списка операторов.
 	void statement(); //разбор оператора.
-	Type expression(); //разбор арифметического выражения.
+	Type expression(); //разбор логических операторов.
+	Type arithmetic(); //разбор арифметического выражения.
 	Type term(); //разбор слагаемого.
 	Type factor(); //разбор множителя.
 	void relation(); //разбор условия.

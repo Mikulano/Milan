@@ -32,6 +32,7 @@ static const char * tokenNames_[] = {
 	"type",
 	"bool",
 	"!",
+	"'->' or '^'",
 };
 
 void Scanner::nextToken()
@@ -225,9 +226,17 @@ void Scanner::nextToken()
 				break;
 
 			case '-':
-				token_ = T_ADDOP;
-				arithmeticValue_ = A_MINUS;
 				nextChar();
+				if (ch_ == '>') {
+					nextChar();
+					token_ = T_LOGIC;
+					arithmeticValue_ = A_IMPLICATION;
+				}
+				else {
+					token_ = T_ADDOP;
+					arithmeticValue_ = A_MINUS;
+				}
+				
 				break;
 
 			case '*':
@@ -243,6 +252,11 @@ void Scanner::nextToken()
 			case '|':
 				token_ = T_ADDOP;
 				arithmeticValue_ = A_OR;
+				nextChar();
+				break;
+			case '^':
+				token_ = T_LOGIC;
+				arithmeticValue_ = A_XOR;
 				nextChar();
 				break;
 			//Иначе лексема ошибки.

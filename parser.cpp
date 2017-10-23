@@ -154,20 +154,40 @@ void Parser::statement()
 		reportError("statement expected.");
 	}
 }
-
 Type Parser::expression()
+{
+	Type type_logic = arithmetic();
+		while (see(T_LOGIC)) {
+			Arithmetic op = scanner_->getArithmeticValue();
+			next();
+			Type type_fstFactor = type_logic;
+			Type type_scndFactor = arithmetic();
+			if (type_fstFactor == type_scndFactor && type_fstFactor == TYPE_BOOL) {
+				if (op == A_IMPLICATION) {
+					codegen_->emit(COMPARE, 4);
+				}
+				else if (op == A_XOR) {
+					codegen_->emit(COMPARE, 1);
+				}
+			}
+			else {
+				reportError("Logic operation is defined for a bool type only");
+			}
+		}
+	return type_logic;
+}
+Type Parser::arithmetic()
 {
 
 	 /*
          Арифметическое выражение описывается следующими правилами:
-		 <expression> -> <term> | <term> + <term> | <term> - <term> | <bool_term> || <bool_term> 
+		 <arithmetic> -> <term> | <term> + <term> | <term> - <term> | <bool_term> || <bool_term> 
          При разборе сначала смотрим первый терм, затем анализируем очередной символ. Если это '+' или '-', 
 		 удаляем его из потока и разбираем очередное слагаемое (вычитаемое). Повторяем проверку и разбор очередного 
 		 терма, пока не встретим за термом символ, отличный от '+' и '-'
 		 Если выражение имеет тип bool, то разрешается использовать логическое "или"
      */
-	Type type_term = TYPE_INT;
-	type_term = term();
+	Type type_term = term();
 	while(see(T_ADDOP)) {
 		Arithmetic op = scanner_->getArithmeticValue();
 		next();
