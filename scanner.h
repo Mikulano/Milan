@@ -29,7 +29,10 @@ enum Token {
 	T_CMP,			// Сводная лексема для операторов отношения
 	T_LPAREN,		// Открывающая скобка
 	T_RPAREN,		// Закрывающая скобка
-	T_SEMICOLON		// ";"
+	T_SEMICOLON,		// ";"
+	T_SQLPAREN,		//Открывающая квадратная скобка
+	T_SQRPAREN,		//Закрывающая квадратная скобка
+	T_ARRAY			//Массив
 };
 
 // Функция tokenToString возвращает описание лексемы.
@@ -76,6 +79,7 @@ public:
 		keywords_["od"] = T_OD;
 		keywords_["write"] = T_WRITE;
 		keywords_["read"] = T_READ;
+		keywords_["array"] = T_ARRAY;
 
 		nextChar();
 	}

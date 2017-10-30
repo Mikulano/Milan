@@ -33,6 +33,7 @@ void Parser::statementList()
 		while(more) {
 			statement();
 			more = match(T_SEMICOLON);
+
 		}
 	}
 }
@@ -43,11 +44,34 @@ void Parser::statement()
 	// Следующей лексемой должно быть присваивание. Затем идет блок expression, который возвращает значение на вершину стека.
 	// Записываем это значение по адресу нашей переменной
 	if(see(T_IDENTIFIER)) {
+		int prevAddress = lastVar_;	//Предыдущее значение указателя памяти, до поиска/создания переменной
 		int varAddress = findOrAddVariable(scanner_->getStringValue());
 		next();
 		mustBe(T_ASSIGN);
-		expression();
-		codegen_->emit(STORE, varAddress);
+		if (see(T_ARRAY)) {
+			next();
+			mustBe(T_SQLPAREN);
+			//next();
+			if (see(T_NUMBER)) {
+
+				if (lastVar_ != prevAddress) {	//Если переменная была объявлена впервые
+					lastVar_ += scanner_->getIntValue() - 1;
+					next();
+				}
+				else {
+					reportError("This variable can not be an array");
+				}
+
+				mustBe(T_SQRPAREN);
+			}
+			else {
+				reportError("The number expected");
+			}
+		}
+		else {
+			expression();
+			codegen_->emit(STORE, varAddress);
+		}
 	}
 	// Если встретили IF, то затем должно следовать условие. На вершине стека лежит 1 или 0 в зависимости от выполнения условия.
 	// Затем зарезервируем место для условного перехода JUMP_NO к блоку ELSE (переход в случае ложного условия). Адрес перехода
@@ -112,7 +136,6 @@ void Parser::expression()
 		 удаляем его из потока и разбираем очередное слагаемое (вычитаемое). Повторяем проверку и разбор очередного 
 		 терма, пока не встретим за термом символ, отличный от '+' и '-'
      */
-
 	term();
 	while(see(T_ADDOP)) {
 		Arithmetic op = scanner_->getArithmeticValue();

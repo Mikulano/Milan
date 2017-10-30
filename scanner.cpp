@@ -28,6 +28,9 @@ static const char * tokenNames_[] = {
 	"'('",
 	"')'",
 	"';'",
+	"]",
+	"[",
+	"array",
 };
 
 void Scanner::nextToken()
@@ -98,7 +101,7 @@ void Scanner::nextToken()
 		}
 
 		transform(buffer.begin(), buffer.end(), buffer.begin(), ::tolower);
-
+		
 		map<string, Token>::iterator kwd = keywords_.find(buffer);
 		if(kwd == keywords_.end()) {
 			token_ = T_IDENTIFIER;
@@ -111,6 +114,16 @@ void Scanner::nextToken()
 	//Символ не является буквой, цифрой, "/" или признаком конца файла
 	else {
 		switch(ch_) {
+			//Признак лексемы открывающей скобки - встретили "["
+			case '[':
+				token_ = T_SQLPAREN;
+				nextChar();
+				break;
+			//Признак лексемы открывающей скобки - встретили "]"
+			case ']':
+				token_ = T_SQRPAREN;
+				nextChar();
+				break;
 			//Признак лексемы открывающей скобки - встретили "("
 			case '(':
 				token_ = T_LPAREN;
