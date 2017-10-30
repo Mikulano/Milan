@@ -57,6 +57,7 @@ public:
 
 private:
 	typedef map<string, int> VarTable;
+	typedef map<string, int> ArrTable;
 	//описание блоков.
 	void program(); //Разбор программы. BEGIN statementList END
 	void statementList(); // Разбор списка операторов.
@@ -113,6 +114,7 @@ private:
 	bool error_; //флаг ошибки. Используется чтобы определить, выводим ли список команд после разбора или нет
 	bool recovered_; //не используется
 	VarTable variables_; //массив переменных, найденных в программе
+	ArrTable arrays_;	//контейнер массивов, найденных в программе
 	int lastVar_; //номер последней записанной переменной
 };
 

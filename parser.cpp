@@ -43,12 +43,41 @@ void Parser::statement()
 	// Если встречаем переменную, то запоминаем ее адрес или добавляем новую если не встретили. 
 	// Следующей лексемой должно быть присваивание. Затем идет блок expression, который возвращает значение на вершину стека.
 	// Записываем это значение по адресу нашей переменной
+	bool isArrayElement = false;
+	int arrayNumber = 0;
 	if(see(T_IDENTIFIER)) {
 		int prevAddress = lastVar_;	//Предыдущее значение указателя памяти, до поиска/создания переменной
 		int varAddress = findOrAddVariable(scanner_->getStringValue());
 		next();
+		if (see(T_SQLPAREN)) {	//обращение к массиву
+			ArrTable::iterator it = arrays_.find(scanner_->getStringValue());
+			if (it != arrays_.end()) {
+				next();
+				if (see(T_NUMBER)) {
+					isArrayElement = true;
+					arrayNumber = scanner_->getIntValue();
+					next();
+					if (arrayNumber > it->second) {
+						reportError("The value was out of bounds of the array");
+					}
+				}
+				else {
+					reportError("A number expected");
+				}
+				mustBe(T_SQRPAREN);
+			}
+			else {
+				reportError("The variable must be an array");
+			}
+		}
 		mustBe(T_ASSIGN);
-		if (see(T_ARRAY)) {
+		if (isArrayElement) {
+			expression();
+			varAddress += arrayNumber;
+			codegen_->emit(PUSH, arrayNumber);
+			codegen_->emit(BSTORE, varAddress);
+		}
+		else if (see(T_ARRAY)) {
 			next();
 			mustBe(T_SQLPAREN);
 			//next();
@@ -56,6 +85,7 @@ void Parser::statement()
 
 				if (lastVar_ != prevAddress) {	//Если переменная была объявлена впервые
 					lastVar_ += scanner_->getIntValue() - 1;
+					arrays_[scanner_->getStringValue()] = scanner_->getIntValue() - 1; //добавляет в список массивов имя массива и количество элементов (-1)
 					next();
 				}
 				else {
@@ -65,12 +95,18 @@ void Parser::statement()
 				mustBe(T_SQRPAREN);
 			}
 			else {
-				reportError("The number expected");
+				reportError("A number expected");
 			}
 		}
-		else {
-			expression();
-			codegen_->emit(STORE, varAddress);
+		else{
+			ArrTable::iterator it = arrays_.find(scanner_->getStringValue());
+			if (it == arrays_.end()) {
+				expression();
+				codegen_->emit(STORE, varAddress);
+			}
+			else {
+				reportError("This operation is undefined for an array");
+			}
 		}
 	}
 	// Если встретили IF, то затем должно следовать условие. На вершине стека лежит 1 или 0 в зависимости от выполнения условия.
