@@ -63,8 +63,8 @@ private:
 	void statementList(); // Разбор списка операторов.
 	void statement(); //разбор оператора.
 	Type expression(); //разбор логических операторов.
-	Type logicOr();
-	Type logicAnd();
+	Type logicOr();  //разбор логических слагаемых.
+	Type logicAnd();  //разбор логических множителей.
 	Type relationTerm(); //разбор лексемы условия.
 	Type arithmetic(); //разбор арифметического выражения.
 	Type term(); //разбор слагаемого.
