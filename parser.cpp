@@ -73,7 +73,6 @@ void Parser::statement()
 		mustBe(T_ASSIGN);
 		if (isArrayElement) {
 			expression();
-			varAddress += arrayNumber;
 			codegen_->emit(PUSH, arrayNumber);
 			codegen_->emit(BSTORE, varAddress);
 		}
@@ -225,7 +224,32 @@ void Parser::factor()
 	else if(see(T_IDENTIFIER)) {
 		int varAddress = findOrAddVariable(scanner_->getStringValue());
 		next();
-		codegen_->emit(LOAD, varAddress);
+		ArrTable::iterator it = arrays_.find(scanner_->getStringValue());
+		if (it == arrays_.end()) {
+			if (see(T_SQLPAREN)) {
+				reportError("The variable must be an array");
+			}
+			else {
+				codegen_->emit(LOAD, varAddress);
+			}
+		}
+		else {
+			mustBe(T_SQLPAREN);
+			if (see(T_NUMBER)) {
+				if (scanner_->getIntValue() <= it->second) {
+					codegen_->emit(PUSH, scanner_->getIntValue());
+					codegen_->emit(BLOAD, varAddress);
+					next();
+					mustBe(T_SQRPAREN);
+				}
+				else {
+					reportError("The value was out of bounds of the array");
+				}
+			}
+			else {
+				reportError("A number expected");
+			}
+		}
 		//Если встретили переменную, то выгружаем значение, лежащее по ее адресу, на вершину стека 
 	}
 	else if(see(T_ADDOP) && scanner_->getArithmeticValue() == A_MINUS) {
