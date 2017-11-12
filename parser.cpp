@@ -171,7 +171,7 @@ Type Parser::expression()
 				}
 			}
 			else {
-				reportError("Logic operation is defined for a bool type only");
+				reportError("a bool expression expected");
 			}
 		}
 	return type_logic;

@@ -113,7 +113,7 @@ private:
 	//Если находит нужную переменную - возвращает ее номер, иначе добавляет ее в массив, увеличивает lastVar и возвращает его.
 	void findAndChangeType(const string&, Type type = TYPE_INT);//функция пробегает по variables_. 
 	//Если находит нужную переменную - изменяет ее тип.
-	Type getType(const string&);
+	Type getType(const string&); //возвращает тип переменной
 	Scanner* scanner_; //лексический анализатор для конструктора
 	CodeGen* codegen_; //указатель на виртуальную машину
 	ostream& output_; //выходной поток (в данном случае используем cout)
