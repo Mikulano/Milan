@@ -57,12 +57,16 @@ void Parser::statement()
 					isArrayElement = true;
 					arrayNumber = scanner_->getIntValue();
 					next();
-					if (arrayNumber > it->second) {
+					if (arrayNumber > it->second || arrayNumber < 0) {
 						reportError("The value was out of bounds of the array");
 					}
+					codegen_->emit(PUSH, arrayNumber);
+					codegen_->emit(STORE, lastVar_ + 20);
 				}
 				else {
-					reportError("A number expected");
+					isArrayElement = true;
+					expression();
+					codegen_->emit(STORE, lastVar_ + 20);
 				}
 				mustBe(T_SQRPAREN);
 			}
@@ -73,7 +77,7 @@ void Parser::statement()
 		mustBe(T_ASSIGN);
 		if (isArrayElement) {
 			expression();
-			codegen_->emit(PUSH, arrayNumber);
+			codegen_->emit(LOAD, lastVar_ + 20);
 			codegen_->emit(BSTORE, varAddress);
 		}
 		else if (see(T_ARRAY)) {
@@ -236,7 +240,7 @@ void Parser::factor()
 		else {
 			mustBe(T_SQLPAREN);
 			if (see(T_NUMBER)) {
-				if (scanner_->getIntValue() <= it->second) {
+				if (scanner_->getIntValue() <= it->second && scanner_->getIntValue() >= 0) {
 					codegen_->emit(PUSH, scanner_->getIntValue());
 					codegen_->emit(BLOAD, varAddress);
 					next();
@@ -247,7 +251,10 @@ void Parser::factor()
 				}
 			}
 			else {
-				reportError("A number expected");
+				expression();
+				codegen_->emit(BLOAD, varAddress);
+				//next();
+				mustBe(T_SQRPAREN);
 			}
 		}
 		//Если встретили переменную, то выгружаем значение, лежащее по ее адресу, на вершину стека 

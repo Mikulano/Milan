@@ -28,8 +28,8 @@ static const char * tokenNames_[] = {
 	"'('",
 	"')'",
 	"';'",
-	"]",
 	"[",
+	"]",
 	"array",
 };
 
